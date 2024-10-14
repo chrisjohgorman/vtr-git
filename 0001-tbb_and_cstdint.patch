@@ -1,0 +1,93 @@
+diff --git a/cmake/modules/FindTBB.cmake b/cmake/modules/FindTBB.cmake
+index 0a1a5bb77..3452abe1e 100644
+--- a/cmake/modules/FindTBB.cmake
++++ b/cmake/modules/FindTBB.cmake
+@@ -184,7 +184,7 @@ if(NOT TBB_FOUND)
+   ##################################
+ 
+   if(TBB_INCLUDE_DIRS)
+-    file(READ "${TBB_INCLUDE_DIRS}/tbb/tbb_stddef.h" _tbb_version_file)
++    file(READ "${TBB_INCLUDE_DIRS}/tbb/version.h" _tbb_version_file)
+     string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR ([0-9]+).*" "\\1"
+         TBB_VERSION_MAJOR "${_tbb_version_file}")
+     string(REGEX REPLACE ".*#define TBB_VERSION_MINOR ([0-9]+).*" "\\1"
+diff --git a/libs/EXTERNAL/libcatch2/src/catch2/catch_test_case_info.hpp b/libs/EXTERNAL/libcatch2/src/catch2/catch_test_case_info.hpp
+index cae3b45af..ead4ede52 100644
+--- a/libs/EXTERNAL/libcatch2/src/catch2/catch_test_case_info.hpp
++++ b/libs/EXTERNAL/libcatch2/src/catch2/catch_test_case_info.hpp
+@@ -15,6 +15,7 @@
+ #include <catch2/internal/catch_unique_ptr.hpp>
+ 
+ 
++#include <cstdint>
+ #include <string>
+ #include <vector>
+ 
+diff --git a/libs/EXTERNAL/libcatch2/src/catch2/internal/catch_xmlwriter.cpp b/libs/EXTERNAL/libcatch2/src/catch2/internal/catch_xmlwriter.cpp
+index 24af491a6..c743347eb 100644
+--- a/libs/EXTERNAL/libcatch2/src/catch2/internal/catch_xmlwriter.cpp
++++ b/libs/EXTERNAL/libcatch2/src/catch2/internal/catch_xmlwriter.cpp
+@@ -12,6 +12,7 @@
+ #include <catch2/internal/catch_xmlwriter.hpp>
+ 
+ #include <iomanip>
++#include <cstdint>
+ #include <type_traits>
+ 
+ namespace Catch {
+diff --git a/libs/librtlnumber/src/include/rtl_utils.hpp b/libs/librtlnumber/src/include/rtl_utils.hpp
+index d4e8139e7..643bc0a9d 100644
+--- a/libs/librtlnumber/src/include/rtl_utils.hpp
++++ b/libs/librtlnumber/src/include/rtl_utils.hpp
+@@ -10,6 +10,7 @@
+ #define RTL_UTILS_H
+ 
+ #include <string>
++#include <cstdint>
+ #include <iostream>
+ 
+ #include <string.h>
+diff --git a/libs/librtlnumber/src/rtl_utils.cpp b/libs/librtlnumber/src/rtl_utils.cpp
+index 8989456aa..08827732f 100644
+--- a/libs/librtlnumber/src/rtl_utils.cpp
++++ b/libs/librtlnumber/src/rtl_utils.cpp
+@@ -8,6 +8,7 @@
+ 
+ #include "rtl_utils.hpp"
+ #include <algorithm>
++#include <cstdint>
+ #include <iostream>
+ 
+ static const char* base_10_digits = "0123456789";
+diff --git a/vpr/src/base/vpr_api.cpp b/vpr/src/base/vpr_api.cpp
+index f4d759a86..24754aa65 100644
+--- a/vpr/src/base/vpr_api.cpp
++++ b/vpr/src/base/vpr_api.cpp
+@@ -93,11 +93,9 @@
+ #include "iostream"
+ 
+ #ifdef VPR_USE_TBB
+-#    include <tbb/task_scheduler_init.h>
+-
+-//We need to store the scheduler object so any concurrency
+-//setting is persistent
+-std::unique_ptr<tbb::task_scheduler_init> tbb_scheduler;
++#    define TBB_PREVIEW_GLOBAL_CONTROL 1 /* Needed for compatibility with old TBB versions */
++#    include <tbb/task_arena.h>
++#    include <tbb/global_control.h>
+ #endif
+ 
+ /* Local subroutines */
+@@ -217,11 +215,10 @@ void vpr_init_with_options(const t_options* options, t_vpr_setup* vpr_setup, t_a
+     //Using Thread Building Blocks
+     if (num_workers == 0) {
+         //Use default concurrency (i.e. maximum conccurency)
+-        num_workers = tbb::task_scheduler_init::default_num_threads();
++        num_workers = tbb::this_task_arena::max_concurrency();
+     }
+ 
+     VTR_LOG("Using up to %zu parallel worker(s)\n", num_workers);
+-    tbb_scheduler = std::make_unique<tbb::task_scheduler_init>(num_workers);
+ #else
+     //No parallel execution support
+     if (num_workers != 1) {
